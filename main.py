@@ -127,8 +127,8 @@ class MainFrame(wx.Frame):
         sizer_series_show.Add(self.combobox_series_show, 1, wx.EXPAND, 0)
         sizer_series_show.Add(self.button_series_show, 0, 0, 0)
         sizer_left_panel.Add(self.grid_IT, 1, wx.EXPAND, 0)
-        sizer_left_panel.Add(sizer_series_show, 0, wx.EXPAND, 0)
         sizer_left_panel.Add(self.button_annotate_spectrum, 0, wx.EXPAND, 0)
+        sizer_left_panel.Add(sizer_series_show, 0, wx.EXPAND, 0)
         sizer_left_panel.Add(self.button_open_scoring, 0, wx.EXPAND, 0)
         sizer_right_panel.Add(sizer_fragments_plots, 1, wx.EXPAND, 10)
         self.main_panel.SetSizer(sizer_main)
@@ -150,6 +150,11 @@ class MainFrame(wx.Frame):
         #Interface tweaks
         self.button_series_show.Disable()
         self.grid_IT.CreateGrid(1, 1)
+
+        tcFont = self.textctrl_isoform_encoder.GetFont()
+        tcFont.SetFamily( wx.FONTFAMILY_TELETYPE )
+        self.textctrl_isoform_encoder.SetFont( tcFont )
+
 
         self.Layout()
         self.PropertyGridWriteParams()
@@ -179,29 +184,6 @@ class MainFrame(wx.Frame):
     def Listener(self, arg1):
         self.ModifySerieSequencesInIT(arg1)
 
-    def ImportPptListFromFile(self, filename):
-        f = open(filename)
-        lf = f.readlines()
-        current_tag = ""
-        for cur_s in lf:
-            if cur_s[-1] == "\n":
-                s = cur_s[:-1]
-            else:
-                s = cur_s
-            if s[0] == ">":
-                current_tag = s[1:]
-            else:
-                seqs = s.split(";")
-                if current_tag == "Isf":
-                    isf_name = seqs[0]
-                    isf_encode = seqs[1]
-                    self.I_list.append(backend.I(isf_name, isf_encode, self.ppts))
-                if current_tag == "Ppt":
-                    ppt_name = seqs[0]
-                    ppt_seq = seqs[1]
-                    self.ppts[ppt_name] = backend.Ppt(ppt_name, ppt_seq)
-        #self.PptListUpdate()
-        #self.IsfListUpdate()
 
     def OnLoadConfigButton(self, event):  # wxGlade: MyFrame.<event_handler>
         with wx.FileDialog(self, "Open Config File", wildcard="Config TXT file|*.txt",
@@ -221,6 +203,8 @@ class MainFrame(wx.Frame):
         self.I_list = []
         self.ppts = {}
         for cur_s in lf:
+            if len(cur_s) < 1:
+                continue
             if cur_s[-1] == "\n":
                 s = cur_s[:-1]
             else:
@@ -242,7 +226,6 @@ class MainFrame(wx.Frame):
 
     def MPLOnclick_fragmentmap(self, event):
         if event.dblclick:
-            print(event.xdata, event.ydata)
             self.OnPlotFragment(int(event.xdata + 0.5), int(event.ydata + 0.5))
 
     def OnGridRowEditClick(self, event):
@@ -263,14 +246,11 @@ class MainFrame(wx.Frame):
         for current_serie in self.IT.series:
             if str(current_serie) == serie_name:
                 cserie = current_serie
-        #print(cserie, f, z)
         b = cserie.fragment_mass_calculator(x, y)
         b = backend.remove_isotopes(b)
         #ac = self.annotation_param[2][1]
         ac = params["mz_accuracy"]
         identified_isotopes = self.operating_mass_spectra.peak_detection(b[:, 0], ac, enter_mz_values=True)
-        #print(identified_isotopes)
-        #print(self.IT.identified_fragments[cserie][:,f])
         self.axes_spectrum.clear()
         nrm = np.max(self.operating_mass_spectra.intensities)
         self.axes_spectrum.plot(self.operating_mass_spectra.mz, self.operating_mass_spectra.intensities)
@@ -287,19 +267,6 @@ class MainFrame(wx.Frame):
         self.axes_spectrum.set_ylim(0, identified_isotopes[2] * 2)
         self.canvas_spectrum.draw()
 
-    def OnPptListCtrlRowSelected(self, event):
-        selected_row = event.GetIndex()
-        selected_ppt_name = self.listctrl_Ppt.GetItemText(item=selected_row, col=0)
-        selected_ppt_seq = self.listctrl_Ppt.GetItemText(item=selected_row, col=1)
-        self.textctrl_PptName.SetValue(selected_ppt_name)
-        self.textctrl_PptSeq.SetValue(selected_ppt_seq)
-
-    def OnIsfListCtrlRowSelected(self, event):
-        selected_row = event.GetIndex()
-        selected_isf_name = self.listctrl_isf.GetItemText(item=selected_row, col=0)
-        selected_isf_seq = self.listctrl_isf.GetItemText(item=selected_row, col=1)
-        self.textctrl_IsfName.SetValue(selected_isf_name)
-        self.textctrl_IsfSeq.SetValue(selected_isf_seq)
 
     def PropertyGridWriteParams(self):
         self.mgprop = {}
@@ -314,34 +281,13 @@ class MainFrame(wx.Frame):
         self.mgprop["isotope_scores_cutoff"] = self.propgrid_processing_control.Append(
             wx.propgrid.FloatProperty("CP2", value=1.0))
         self.mgprop["max_z"] = self.propgrid_processing_control.Append(wx.propgrid.IntProperty("max Z", value=25))
-        #self.anntctrl.Append(wx.propgrid.PropertyCategory("Probabilistic Annotation"))
-        #self.mgprop["alpha_value"] = self.anntctrl.Append(wx.propgrid.FloatProperty("Alpha value", value=0.05))
-        #self.mgprop["beta_value"] = self.anntctrl.Append(wx.propgrid.FloatProperty("Beta value", value=0.1))
-        #params
-        #for k in range(len(self.annotation_param)):
-        #    key = self.annotation_param[k][0]
-        #    val = self.annotation_param[k][1]
-        #    print(key, val)
-        #    if type(val) == str:
-        #        self.anntctrl.Append(wx.propgrid.StringProperty(key, value=val))
-        #    if type(val) == float:
-        #        self.anntctrl.Append(wx.propgrid.FloatProperty(key, value=val))
         self.propgrid_processing_control.FitColumns()
 
     def GetManagingProperties(self):
-        res = {}  #data={"T":"r",'folder':params["fid_folder"]}
+        res = {}
         for k in self.mgprop:
             res[k] = self.mgprop[k].GetValue()
-        print(res)
         return res
-
-    #def WriteAnnotationParams(self):
-    #    self.listctrl_anntctrl.ClearAll()
-    #    self.listctrl_anntctrl.AppendColumn("Parameter", format=wx.LIST_FORMAT_LEFT, width=239)
-    #    self.listctrl_anntctrl.AppendColumn("Value", format=wx.LIST_FORMAT_LEFT, width=132)
-    #    for k in range(len(self.annotation_param)):
-    #        index_item = self.listctrl_anntctrl.InsertItem(0, self.annotation_param[k][0])
-    #        self.listctrl_anntctrl.SetItem(index_item, 1, str(self.annotation_param[k][1]))
 
     def LoadSpectra(self):
         params = self.GetManagingProperties()
@@ -349,7 +295,6 @@ class MainFrame(wx.Frame):
         self.axes_spectrum.clear()
         self.operating_mass_spectra = backend.InternalMassSpectrum(2000, 0.001)
         self.operating_mass_spectra.load_calibrated_MS_spectra_from_txt(self.pathname, parentZ=params["max_z"])
-        self.operating_mass_spectra.find_peaks(height=params["peak_threshold"])
         self.axes_spectrum.plot(self.operating_mass_spectra.mz, self.operating_mass_spectra.intensities)
         self.figure_spectrum.canvas.draw()
         self.sb.SetStatusText('Loading spectrum done')
@@ -361,22 +306,6 @@ class MainFrame(wx.Frame):
                 return 0  #
             self.pathname = fileDialog.GetPath()
             self.LoadSpectra()
-
-        #event.Skip()
-
-    #def PptListUpdate(self):
-    #    self.listctrl_Ppt.DeleteAllItems()
-    #    index_item = 0
-    #    for k in self.ppts:
-    #        index_item = self.listctrl_Ppt.InsertItem(0, k)
-    #        self.listctrl_Ppt.SetItem(index_item, 1, self.ppts[k].seq)
-    #index_item += 1
-
-    #def IsfListUpdate(self):
-    #    self.listctrl_isf.DeleteAllItems()
-    #    for isf in self.I_list:
-    #        index_item = self.listctrl_isf.InsertItem(0,isf.name)
-    #        self.listctrl_isf.SetItem(index_item, 1, isf.init_formula)
 
     def OnExit(self, event):  # wxGlade: MyFrame.<event_handler>
         print("Event handler 'OnExit' not implemented!")
@@ -399,10 +328,10 @@ class MainFrame(wx.Frame):
         self.current_serie_name = current_serie_name
         self.axes_fragment_map.set_title(str(current_serie))
         if self.ims != None:
-            self.axes_fragment_map.imshow(self.IT.identified_fragments[current_serie], aspect="equal", cmap='plasma',
+            self.axes_fragment_map.imshow(self.IT.CP_values[current_serie], aspect="equal", cmap='plasma',
                                           vmax=1, vmin=0)
         else:
-            self.ims = self.axes_fragment_map.imshow(self.IT.identified_fragments[current_serie], aspect="equal",
+            self.ims = self.axes_fragment_map.imshow(self.IT.CP_values[current_serie], aspect="equal",
                                                      cmap='plasma', vmax=1, vmin=0)
             self.figure_fragment_map.colorbar(self.ims)
         self.canvas_fragment_map.draw()
@@ -417,10 +346,10 @@ class MainFrame(wx.Frame):
         self.current_serie_name = current_serie_name
         self.axes_fragment_map.set_title(str(current_serie))
         if self.ims != None:
-            self.axes_fragment_map.imshow(self.IT.identified_fragments[current_serie], aspect="equal", cmap='plasma',
+            self.axes_fragment_map.imshow(self.IT.CP_values[current_serie], aspect="equal", cmap='plasma',
                                           vmax=1, vmin=0)
         else:
-            self.ims = self.axes_fragment_map.imshow(self.IT.identified_fragments[current_serie], aspect="equal",
+            self.ims = self.axes_fragment_map.imshow(self.IT.CP_values[current_serie], aspect="equal",
                                                      cmap='plasma', vmax=1, vmin=0)
             self.figure_fragment_map.colorbar(self.ims)
         self.canvas_fragment_map.draw()
@@ -463,11 +392,12 @@ class MainFrame(wx.Frame):
         mass_accuracy = params["mz_accuracy"]
         cutoff = params["isotope_scores_cutoff"]
         sgo = params["isotope_scores_sgo"]
+        self.operating_mass_spectra.find_peaks(height=params["peak_threshold"])
         self.IT.annotate_fragment(self.operating_mass_spectra, mass_accuracy=mass_accuracy, maxZ=maxZ)
         choices = []
         for s in self.IT.series:
-            self.IT.evaluation_function(s, cutoff=cutoff, sgo=sgo)
-            self.IT.ksi_compute(s)
+            self.IT.evaluation_function(s, CP2=cutoff, CP1=sgo)
+            self.IT.gamma_compute(s)
             #choices.append(str(s))
             self.combobox_series_show.Append(str(s))
         self.button_series_show.Enable()
@@ -653,7 +583,7 @@ class ProbabilitiesFrame(wx.Frame):
         alpha_value = params["alpha_value"]
         beta_value = params["beta_value"]
         self.IT.compute_Pmatrix()
-        self.IT.compute_Pt_matrix(alpha=alpha_value, beta=beta_value, consider_ksi=True)
+        self.IT.compute_Pt_matrix(alpha=alpha_value, beta=beta_value, consider_gamma=True)
         self.IT.compute_probabilies()
         self.BayessianPlotter()
         report_string = "\n".join(self.IT.report_strings)

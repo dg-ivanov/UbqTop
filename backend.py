@@ -136,7 +136,6 @@ class S:
                 intact_ppts_keys.append(str(k) + "_" + str(self.intact_ppts[k]))
             intact_ppts_keys.sort()
             for_calc = (self.f_name, self.fragmenting_ppt, (tuple(intact_ppts_keys)))
-        # print("hash of",for_calc, "is", hash(for_calc))
         return hash(for_calc)
 
     def __eq__(self, other): #comparator of the fragment series identity
@@ -334,11 +333,11 @@ class InternalMassSpectrum:
         self.intensities = np.zeros(len(self.mz))
         self.parentZ = -1
 
-    def find_peaks(self, height):
+    def find_peaks(self, height):   #peak picking height is percentage cutoff of the maximum intensity in spectra
         peaks, _ = signal.find_peaks(self.intensities, height=height)
         self.peaks = peaks
 
-    def load_calibrated_MS_spectra_from_txt(self, filename, parentZ):
+    def load_calibrated_MS_spectra_from_txt(self, filename, parentZ): #import of x-y MS spectrum from txt data
         try:
             data = np.genfromtxt(filename, delimiter="\t")
             x = data[:, 0]
@@ -346,8 +345,6 @@ class InternalMassSpectrum:
             data = np.genfromtxt(filename, delimiter=",")
             x = data[:, 0]
         y = data[:, 1]
-        #plt.plot(x,y)
-        #plt.show()
         cs = CubicSpline(x, y)
         mz = self.mz
         ys = cs(mz)
@@ -360,13 +357,16 @@ class InternalMassSpectrum:
         self.intensities = ys
 
     def peak_detection(self, isotopes_list, tol=1e-6, enter_mz_values=False):
+        #function for detection of the isotopes from the supplemented list
+        #isotopes_list - output from pyopenms coarse isotope calculator
+        #tol - maximum deviation (in Th values) for the isotopes in theoretical and experimental data for matching
+        #enter_mz_values - obsolete, for debugging purposes
         masses = self.mz[self.peaks]
         intensities = self.intensities[self.peaks]
         i = 0
         j = 0
         max_int = 0.0
         isotope_identified = list(isotopes_list * 0)
-        #print(masses)
         if isotopes_list[0] > masses[-1]:
             return isotope_identified
         i = np.argmin(np.abs(masses - isotopes_list[0])) - 10
@@ -377,81 +377,39 @@ class InternalMassSpectrum:
                 break
             if np.abs(masses[i] - isotopes_list[j]) < tol:
                 isotope_identified[j] = 1.0
-                #print(max_int, intensities[i])
                 max_int = max(max_int, intensities[i])
             i += 1
-        #print(isotopes_list, isotope_identified)
         if enter_mz_values:
             return (isotopes_list, isotope_identified, max_int)
         else:
             return isotope_identified
 
-    def mass_calibrator(self, series, mass_accuracy=0.01, max_Z=5, cutoff=0.6, intensity_cutoff=0.4, iterations=2):
-        theoretical_mz = []
-        experimental_mz = []
-        ms = self
-        for s in range(len(series)):
-            serie = series[s]
-            number_of_fragments = len(serie.seq_of_fragmenting_unit)
-            table_of_identified_fragments = np.zeros((ms.parentZ, number_of_fragments))
-            for z in range(1, max_Z):
-                for k in range(1, number_of_fragments):
-                    b = serie.fragment_mass_calculator(k, z)
-                    b = remove_isotopes(b, cutoff)
-                    identified_isotopes = ms.peak_detection(b[:, 0], mass_accuracy, enter_mz_values=True)
-                    for i in range(len(identified_isotopes)):
-                        if identified_isotopes[i] != 0:
-                            if identified_isotopes[i][1] > intensity_cutoff:
-                                theoretical_mz.append(b[:, 0][i])
-                                experimental_mz.append(identified_isotopes[i][0])
-                                #print(serie, k, z, b[:,0][i], identified_isotopes[i][0])
-        theormz = theoretical_mz
-        devmz = np.array(theoretical_mz) - np.array(experimental_mz)
-        fig, ax = plt.subplots(2, 1)
-        for k in range(iterations):
-            param = np.polyfit(theormz, devmz, 1)
-            polynom = np.poly1d(param)
-            deviations_from_approx = devmz - polynom(devmz)
-            ax[0].plot(theormz, devmz, "o")
-            ax[0].plot(ms.mz, polynom(ms.mz), "-")
-            #print(np.std(deviations_from_approx))
-            new_theor = []
-            new_devmz = []
-            for i in range(len(theormz)):
-                if np.abs(deviations_from_approx[i]) < 2 * np.std(deviations_from_approx):
-                    new_theor.append(theormz[i])
-                    new_devmz.append(devmz[i])
-            theormz = np.array(new_theor)
-            devmz = np.array(new_devmz)
-        param = np.polyfit(theormz, devmz, 1)
-        polynom = np.poly1d(param)
-        new_mz = ms.mz + polynom(ms.mz)
-        ax[1].plot(ms.mz, ms.intensities)
-        ax[0].set_xlim(min(ms.mz), max(ms.mz))
-        cs = CubicSpline(new_mz, ms.intensities)
-        ys = cs(self.mz)
-        ys = np.array(ys)
-        ys = ys / np.max(ys)
-        self.intensities = ys
-        ax[1].plot(self.mz, self.intensities)
-        plt.show()
-
 
 class IsoformTable:
+    #class associated with the isoform table, main component for the analysis
+    #contains the information about series of the fragments, and intervals of every series for every isoform
+    #contains methods for assessment of which fragments for every series
+    #once MS data is processed, every series is supplemented with the list of identified fragments based on the CP valeus
+
     def __init__(self, Isoforms):
         """
 
         :type Isoforms: list(I)
         """
-        self.ticks_array = None
-        self.series = []
-        self.table_of_fragments = []
-        self.Q = {}
-        self.ksi = {}
-        self.identified_fragments = {}
-        self.isoforms_names = []
-        self.report_strings = []
-        for isoform in Isoforms:
+        self.series = []    #list of series S presented in IT
+        self.table_of_fragments = []  # table with theoretical fragment intervals for every isoform  #
+
+        #in three following dicts keys are series
+        self.CP_values = {} # dict with CP values for fragments. values are lists of lists (2D matrix) with CP value of each fragment of each charge state
+        self.Q = {} # dict with indicators of the presence of specific fragment in the spectrum. values are associated with the specific fragment indicator (1 if present, 0 if not)#        #
+        self.gamma = {} #information on the gamma values for the fragments. values are lists with elements associated with fragment in series
+
+        self.isoforms_names = [] #names of isoforms presented in IT
+        self.ticks_array = None # x-ticks for bayesian plot
+        self.report_strings = [] # content for table in bayesian plot window
+
+
+        for isoform in Isoforms:    #unpacking of fragment series data for every isoform and combining them into the one set
             self.isoforms_names.append(isoform.name)
             for serie in isoform.S_set:
                 in_series = -1
@@ -463,18 +421,22 @@ class IsoformTable:
                 else:
                     self.series.append(serie)
                     self.table_of_fragments.append({isoform.name: isoform.S_set[serie]})
+
         for k in range(len(self.series)):
             self.series[k].generate_sequences()
-        self.dict_of_series = {}
+
+        self.dict_of_series = {} #re-packing information of the table of fragments in the dict format
+
         for ind in range(len(self.series)):
             self.dict_of_series[self.series[ind]] = self.table_of_fragments[ind]
 
-        for isoform in self.isoforms_names:
+        for isoform in self.isoforms_names: #filling gaps in table with empty intervals
             for serie in self.series:
                 if isoform not in self.dict_of_series[serie]:
                     self.dict_of_series[serie][isoform] = [(0, 1)]
 
     def continuity(self, isotopes):
+        #supplemntal function for calculation of the longest isotopic series
         interim_res = 0.0
         res = 0.0
         for k in isotopes:
@@ -484,12 +446,11 @@ class IsoformTable:
                 res = max(res, interim_res)
                 interim_res = 0.0
         res = max(res, interim_res)
-        #print("cont", isotopes, res, res / len(isotopes))
         return res / len(isotopes)
 
-    #def correct_mass(self, ms:InternalMassSpectrum, mass_accuracy):
 
     def annotate_fragment(self, ms: InternalMassSpectrum, mass_accuracy, maxZ):
+        #function that takes mass spectrum (in the internal format) and perform annotation of peaks and calcualtion of CP values
         serie: S
         for s in range(len(self.series)):
             serie = self.series[s]
@@ -500,48 +461,42 @@ class IsoformTable:
                     b = serie.fragment_mass_calculator(k, z)
                     b = remove_isotopes(b)
                     identified_isotopes = ms.peak_detection(b[:, 0], mass_accuracy)
-                    #print(k, z, identified_isotopes)
-                    # c = remove_intensities(b)
-                    # print(str(serie),z, k, self.continuity(identified_isotopes))
                     table_of_identified_fragments[z][k] = self.continuity(identified_isotopes)
-            self.identified_fragments[self.series[s]] = table_of_identified_fragments
+            self.CP_values[self.series[s]] = table_of_identified_fragments
 
-    def evaluation_function(self, serie, cutoff=1.0, sgo=0.25):
+    def evaluation_function(self, serie, CP2=1.0, CP1=0.25):
+        #functon that uses CP values with CP1 and CP2 cutoffs to calculate indicators for presence of fragments and write them down in Q
         result = []
-        for k in range(len(self.identified_fragments[serie][0])):
-            vec_x = self.identified_fragments[serie][:, k]
-            #print(vec_x)
+        for k in range(len(self.CP_values[serie][0])):
+            vec_x = self.CP_values[serie][:, k]
             res = 0
             for x in vec_x:
-                if x >= sgo:
+                if x >= CP1:
                     res += x
-            if res >= cutoff:
+            if res >= CP2:
                 result.append(1)
             else:
                 result.append(0)
         self.Q[serie] = result
 
-    def ksi_compute(self, serie, N=5):
+    def gamma_compute(self, serie, N=5): #computation of gamma function
         q = self.Q[serie]
-        ksi = moving_average(q, N)
-        self.ksi[serie] = ksi
-
-        #    def interval_deconvolution(self):
-
+        gamma = moving_average(q, N)
+        self.gamma[serie] = gamma
         for isoform in self.isoforms_names:
             for serie in self.series:
                 if isoform not in self.dict_of_series[serie]:
                     self.dict_of_series[serie][isoform] = [(0, 1)]
 
     def compute_Pmatrix(self):
+        #creation of the dict P for storage of conditional probabilities matrixes for every series
+        #P has series as keys and values as matrixes
+        #every matrix P has rows associated with isoforms, and columns with the fragment from the corresponsing series
+        #these matrixes are filled with 1 and 0 values; 1 if the fragment can be generated by the isoform and 0 for opposite
         self.P = {}
-        all_isoforms = self.isoforms_names
-        #print(all_isoforms)
-        #print(self.table_of_fragments)
         for serie in self.series:
             self.P[serie] = {}
             fragments = np.arange(len(serie.seq_of_fragmenting_unit))
-            print(self.dict_of_series)
             for isoform in self.dict_of_series[serie]:
                 res = []
                 for fragment in fragments:
@@ -553,14 +508,14 @@ class IsoformTable:
                         #res.append(0.5 - alpha / 2.0)
                 self.P[serie][isoform] = np.array(res)
 
-    def compute_Pt_matrix(self, alpha, consider_ksi=False, beta=0.05):
+    def compute_Pt_matrix(self, alpha, consider_gamma=False, beta=0.05):
+        #computation of the conditional probability matrixes dict Pt based on the P template using alpha, beta, and gamma values
         self.Pt = {}
         for serie in self.series:
-            print(serie, self.P[serie])
             current_P_dict_fragment = self.P[serie]
             Q = self.Q[serie]
-            if consider_ksi:
-                ksi = self.ksi[serie]
+            if consider_gamma:
+                gamma = self.gamma[serie]
             P = []
             for isoform_name in self.isoforms_names:
                 P.append(current_P_dict_fragment[isoform_name])
@@ -570,26 +525,21 @@ class IsoformTable:
             for i in range(len(Q) - 1):
                 n = len(P[:, i])
                 if Q[i] == 0:
-                    if not consider_ksi:
+                    if not consider_gamma:
                         Pt[:, i] = P[:, i] * 0.0 + 1.0
                     else:
-                        Pt[:, i] = 0.5 - ksi[i] * beta * (P[:, i] - 1 / 2)
+                        Pt[:, i] = 0.5 - gamma[i] * beta * (P[:, i] - 1 / 2)
                 else:
                     Pt[:, i] = 0.5 + alpha * (P[:, i] - 1 / 2)
                 Pt[:, i] = Pt[:, i] / np.sum(Pt[:, i])
             self.Pt[serie] = Pt
-            #print(alpha)
-            #print(str(serie))
-            #print("P", P)
-            #print("Pt", Pt)
-            #print("ksi", ksi)
-            #print(len("ksi"), ksi)
 
-    def compute_probabilies(self):
+    def compute_probabilies(self):  #bayesian calculator
         r = []
         m = len(self.isoforms_names)
         r.append(np.zeros(m) + 1.0 / m)
         self.ticks_array = []
+        self.report_strings = []
         for serie in self.series:
             Pt = self.Pt[serie]
             for i in range(len(Pt[0]) - 1):
@@ -604,60 +554,9 @@ class IsoformTable:
         self.r_matrix = np.array(r)
         self.final_probs = [self.isoforms_names, rnew]
 
-    def fragment_plotter(self):
-        total_number_of_series = len(self.series)
-        rows_number = int(round(np.sqrt(total_number_of_series)))
-        axs = []
-        fig = plt.figure()
-        nrs = rows_number
-        ncs = total_number_of_series // rows_number + 1
-        for k in range(total_number_of_series):
-            ax = fig.add_subplot(ncs, nrs, k + 1)
-            ax.imshow(self.identified_fragments[self.series[k]], aspect="equal")
-            ax.set_title(str(self.series[k]))
-            if self.series[k].f_type == "C":
-                ax.invert_xaxis()
-            axs.append(ax)
-        # plt.tight_layout()
-        plt.show()
-
-    def bayesian_show(self):
-        for k in range(len(self.r_matrix[0])):
-            plt.plot(self.r_matrix[:, k] + k * 0.001, "o--", label=self.isoforms_names[k], markersize=2)
-        plt.ylim(0, 1)
-        plt.legend()
-        plt.show()
-
-
-def main_old():
-    path_to_file = "k6k6k48_prox_1273_etd5_2mtorr.txt"
-    operating_mass_spectra = InternalMassSpectrum(3000, 0.0001)
-    operating_mass_spectra.load_calibrated_MS_spectra_from_txt(path_to_file, 20)
-    operating_mass_spectra.find_peaks(height=0.002)
-    Ubq = Ppt("Ub", "MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG")
-    ppts = {"Ub": Ubq}
-    test_I = I("test_isoform1", "Ub,48(Ub, 48(Ub))", ppts)
-    test_I.generate_series_of_fragment("c")
-    test_I.generate_series_of_fragment("z")
-    IT = IsoformTable([test_I])
-    IT.annotate_fragment(operating_mass_spectra, mass_accuracy=0.003)
-    for s in IT.series:
-        IT.evaluation_function(s, cutoff=1.0, sgo=0.25)
-    IT.compute_Pmatrix(alpha=0.05)
-    IT.compute_Pt_matrix()
-    IT.compute_probabilies()
-    # IT.fragment_plotter()
-    return 0
-
-
 def main():
     return 0
 
-
-
-
 if __name__ == "__main__":
     main()
-
-# X,48(Ub,6(Ub,48(Ub),63(Ub))),63(Ub,29(Ub))
 
