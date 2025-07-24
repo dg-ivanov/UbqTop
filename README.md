@@ -32,4 +32,11 @@ If the spectrum is loaded correctly, it appears in the main spectrum window of U
 
 ### 2. Config file loading
 
-In order to encode the branched proteins sequences, UbqTop uses the
+UbqTop uses internal FASTA-like format for encoding sequnces and topologies of branched proteins. The details on the format and principle of the encoding can be found the UbqTop paper. The examples of the config files are presented in **EXAMPLES** folder
+
+The config file can be loaded into the UbqTop by clicking the **2. Load config from file ...** button or entered manually into the text window behind the button. The loaded text file appears in the same text window, and can be further modified. 
+This content in the window is used for the calculation of fragment series and generation of the fragment series intervals
+
+### 2. Isoform table generation
+
+After the config file has been loaded or the table has been generated, the isoform table needs to be generated. In order to do this, the user needs to select fragment types that will be used in the analysis by multiple choice buttons, and then click **3. Generate Isoform Table** button.  
