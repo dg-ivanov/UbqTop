@@ -1,0 +1,10 @@
+>Ppt
+Ub;MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG
+>Isf
+K6_trimer;Ub,6(Ub,6(Ub))
+K48_trimer;Ub,48(Ub,48(Ub))
+K63_trimer;Ub,63(Ub,63(Ub))
+K63_K48_trimer;Ub,63(Ub,48(Ub))
+K6_K48_branched_trimer;Ub,6(Ub),48(Ub)
+K11_K48_branched_trimer;Ub,11(Ub),48(Ub)
+K48_K63_branched_trimer;Ub,48(Ub),63(Ub)
