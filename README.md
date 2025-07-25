@@ -39,4 +39,8 @@ This content in the window is used for the calculation of fragment series and ge
 
 ### 2. Isoform table generation
 
-After the config file has been loaded or the table has been generated, the isoform table needs to be generated. In order to do this, the user needs to select fragment types that will be used in the analysis by multiple choice buttons, and then click **3. Generate Isoform Table** button.  
+After the config file has been loaded or the table has been generated, the isoform table needs to be generated. In order to do this, the user needs to select fragment types that will be used in the analysis by multiple choice buttons, and then click **3. Generate Isoform Table** button. After that, the table with fragment series and fragment series intervals will be generated
+
+### 3. Annotation of the MS2 spectrum
+
+In order to initiate the annotation of the fragments in the experimental series based on the . The progress can be checked in the status bar of the software
