@@ -8,7 +8,7 @@ UbqTop is a centralized software package for automated processing of the TD-MS d
 UbqTop works in the vendor-independent manner and can process TD-MS data containig $a$, $b$, $c$, $x$, $y$, $z$ fragments, making it suitable
 for analysis for TD-MS data using all common fragmentation techniques
 
-Principle of operation for UbqTop is described in .... If you are using this software, please cite this paper
+Principle of operation for UbqTop is described in the associated bioRxiv preprint: 
 
 ## Installation
 UbqTop is completely written in Python 3 and requires several external libraries available in pip. Specifically, it uses pyOpenMS for calculation of the isotope patterns of fragment ions, and wxPython for GUI. Before running the scripts, all of the needed libraries need to be installed using pip.
@@ -49,9 +49,13 @@ of particular series, it is possible to select the series of interest from the l
 Once the specific series is selected, two diagrams appears behind the MS spectrum window: CP values diagram (on the left side) and series coverage diagram (on the right side). The details on the CP value meaning can be found in the associated paper. CP values diagram is a raster diagram where 
 x-coordinate of the dot refers to the fragment number in series, and y-coordinate - to the charge state. The color of the raster dot is associated with the CP value of the particular charge state of the corresponding fragment. The dots in the CP values diagram are interactive: double-click on the dot shows isotopes of the particular fragment in the corresponding charge state in the MS2 spectrum window. The isotopes that were matched in the spectrum shows as a green grid lines, while the missing ones - as red grid lines. 
 
-Sequence coverage is shown based on the CP1/CP2 criteria described in the paper. The CP1 and CP2 values can be adjusted in the property grid within software. After changing the values, the annotation of spectra needs to be updated by clicking the **3. Annotate spectrum** button.
+Parameters of the fragment matching can be adjusted in the parameters section. The __Intensity threshold__ is the minimum relative intensity that is used for peak picking. The __m/z accuracy__ is a maximum deviation (in Da) between experimental and theoretical isotope m/z values that can be used for matching fragments. The default values are adjusted for the Orbitrap 240k EThcD MS2 spectra.
+
+Annotation of the sequence coverage is based on the CP1/CP2 criteria described in the paper. The CP1 and CP2 values can be adjusted in the parameters section within software. After changing the values, the annotation of spectra needs to be updated by clicking the **3. Annotate spectrum** button.
 
 ### 4. Calculation of scores
 
-To open the bayesian scoring window the button **4. Calculate scores** needs to be clicked. Activation of this function will cause opening the second window that can be used for plotting of scores graphs.
+To open the bayesian scoring window the button **4. Calculate scores ...** needs to be clicked. Activation of this function will cause opening the second window that can be used for plotting of scores graphs.
+In the property grid in the software it is possible to adjust the $\alpha$ and $\beta$ that are responsible for influece of the detected ($\alpha$) and missing ($\beta$) fragments. The pre-filled parameters were found to be the optimal for the characterization of the broad types of chains.
 
+In order to generate scores, the **Calculate Scores** button needs to be clicked. The scores plots for each isoform will appear in the graph window, and the values of the scores after considering each fragments appears in the text window behind the **Calculate Scores** button. The captions on the scores plot can be edited by changing the parameters in the __Plot Parameters__ section of the parameters section in scores window. Scoring plots can be exported by clicking the **Save** icon on top of the save scores window.
