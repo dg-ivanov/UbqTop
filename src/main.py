@@ -300,7 +300,7 @@ class MainFrame(wx.Frame):
         self.sb.SetStatusText('Loading spectrum done')
 
     def OnLoadFromTxt(self, event):  # wxGlade: MyFrame.<event_handler>
-        with wx.FileDialog(self, "Open Tab Separated file", wildcard="Tab Separated TXT|*.txt",
+        with wx.FileDialog(self, "Open TD-MS data", wildcard="x-y spectrum | *.*",
                            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
             if fileDialog.ShowModal() == wx.ID_CANCEL:
                 return 0  #
