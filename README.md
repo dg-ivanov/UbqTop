@@ -39,8 +39,19 @@ This content in the window is used for the calculation of fragment series and ge
 
 ### 2. Isoform table generation
 
-After the config file has been loaded or the table has been generated, the isoform table needs to be generated. In order to do this, the user needs to select fragment types that will be used in the analysis by multiple choice buttons, and then click **3. Generate Isoform Table** button. After that, the table with fragment series and fragment series intervals will be generated
+After the config file has been loaded the isoform table needs to be generated. In order to do this, the user needs to select fragment types that will be used in the analysis by multiple choice buttons, and then click **3. Generate Isoform Table** button. After that, the table with fragment series and fragment series intervals will be generated
 
 ### 3. Annotation of the MS2 spectrum
 
-In order to initiate the annotation of the fragments in the experimental series based on the . The progress can be checked in the status bar of the software
+In order to initiate the annotation of the fragments in the MS2 spectrum according to the isoform table, click **3. Annotate spectrum**. The progress can be checked in the status bar of the software. Once the spectrum has been processed (full processing usually requires 1-10 s), the status bar shows message "Spectrum annotation processing done", and the series from the isoform table appears in the **Show fragment series** list. In order to manually examine the fragment coverage 
+of particular series, it is possible to select the series of interest from the list and click **Show** button.
+
+Once the specific series is selected, two diagrams appears behind the MS spectrum window: CP values diagram (on the left side) and series coverage diagram (on the right side). The details on the CP value meaning can be found in the associated paper. CP values diagram is a raster diagram where 
+x-coordinate of the dot refers to the fragment number in series, and y-coordinate - to the charge state. The color of the raster dot is associated with the CP value of the particular charge state of the corresponding fragment. The dots in the CP values diagram are interactive: double-click on the dot shows isotopes of the particular fragment in the corresponding charge state in the MS2 spectrum window. The isotopes that were matched in the spectrum shows as a green grid lines, while the missing ones - as red grid lines. 
+
+Sequence coverage is shown based on the CP1/CP2 criteria described in the paper. The CP1 and CP2 values can be adjusted in the property grid within software. After changing the values, the annotation of spectra needs to be updated by clicking the **3. Annotate spectrum** button.
+
+### 4. Calculation of scores
+
+To open the bayesian scoring window the button **4. Calculate scores** needs to be clicked. Activation of this function will cause opening the second window that can be used for plotting of scores graphs.
+
